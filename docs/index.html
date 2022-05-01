@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>PCA in mlr3 Pipelines</title>
+
+<script src="libs/header-attrs-2.13/header-attrs.js"></script>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="libs/navigation-1.1/tabsets.js"></script>
+<script src="libs/navigation-1.1/codefolding.js"></script>
+<link href="libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="libs/pagedtable-1.1/css/pagedtable.css" rel="stylesheet" />
+<script src="libs/pagedtable-1.1/js/pagedtable.js"></script>
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.js" data-external="1" defer integrity="sha256-bgI9WhLOPSUlPrdgHUg3rPIB2vq+D+mYkUTM3q0U8fw=" crossorigin="anonymous"></script>
+<script>document.addEventListener("DOMContentLoaded", function () {
+  var mathElements = document.getElementsByClassName("math");
+  var macros = [];
+  for (var i = 0; i < mathElements.length; i++) {
+    var texText = mathElements[i].firstChild;
+    if (mathElements[i].tagName == "SPAN") {
+      katex.render(texText.data, mathElements[i], {
+        displayMode: mathElements[i].classList.contains("display"),
+        throwOnError: false,
+        macros: macros,
+        fleqn: false
+      });
+    }}});
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.css" data-external="1">
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+<link rel="stylesheet" href="assets/style.css" type="text/css" />
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+.tocify-subheader {
+  display: inline;
+}
+.tocify-subheader .tocify-item {
+  font-size: 0.95em;
+}
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+<script>
+$("div.row > .col.sm-12.col-md-4.col-lg-3")
+  .attr("class", "col-xs-12 col-sm-4 col-md-3")
+$("div.row > .toc-content.col.sm-12.col-md-8.col-lg-9")
+  .attr("class", "toc-content col-xs-12 col-sm-8 col-md-9")
+</script>
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">PCA in mlr3 Pipelines</h1>
+
+</div>
+
+
+<div id="setup" class="section level2 hasAnchor">
+<h2 class="hasAnchor">Setup<a href="#setup" class="anchor-section"
+aria-label="Anchor link to header"></a></h2>
+<div id="_packages_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+packages<a href="#_packages_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>library(mlr3verse)
+library(data.table)
+library(future)
+library(igraph)
+library(ggfortify)
+library(scattermore)
+library(R6)
+library(mlr3pipelines)
+library(paradox)
+library(rlang)</code></pre>
+</div>
+<div id="_multicore_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+multicore<a href="#_multicore_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>plan(multicore)</code></pre>
+</div>
+</div>
+<div id="a-pca-example" class="section level2 hasAnchor">
+<h2 class="hasAnchor">A PCA Example<a href="#a-pca-example"
+class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Our goal here will be to extract the PCA matrix from the mlr3
+pipeline.</p>
+<p>This will allow us to create custom &amp; performant plots as
+necessary.</p>
+<div id="_task_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+task<a href="#_task_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>task &lt;- tsk(&quot;iris&quot;)
+
+task
+
+task$task_type
+
+task$data()[, summary(Species)]</code></pre>
+<pre><code>## &lt;TaskClassif:iris&gt; (150 x 5): Iris Flowers
+## * Target: Species
+## * Properties: multiclass
+## * Features (4):
+##   - dbl (4): Petal.Length, Petal.Width, Sepal.Length, Sepal.Width
+## [1] &quot;classif&quot;
+##     setosa versicolor  virginica 
+##         50         50         50</code></pre>
+</div>
+<div id="_pipeline_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+pipeline<a href="#_pipeline_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>graph &lt;- po(&quot;pca&quot;) %&gt;&gt;%
+  po(&quot;learner&quot;, lrn(&quot;classif.rpart&quot;))
+
+graph
+
+graph$plot()</code></pre>
+<p><img src="assets/img/mlr3-pipelines/pipeline-1.png" width="672" /></p>
+<pre><code>## Graph with 2 PipeOps:
+##             ID         State      sccssors prdcssors
+##            pca &lt;&lt;UNTRAINED&gt;&gt; classif.rpart          
+##  classif.rpart &lt;&lt;UNTRAINED&gt;&gt;                     pca</code></pre>
+</div>
+<div id="_train_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+train<a href="#_train_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>graph$train(task)</code></pre>
+<pre><code>## $classif.rpart.output
+## NULL</code></pre>
+</div>
+<div id="_pcaresults_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+pca.results<a href="#_pcaresults_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>graph$state$pca
+
+summary(graph$state$pca)</code></pre>
+<pre><code>## Standard deviations (1, .., p=4):
+## [1] 2.0562689 0.4926162 0.2796596 0.1543862
+## 
+## Rotation (n x k) = (4 x 4):
+##                      PC1         PC2         PC3        PC4
+## Petal.Length  0.85667061 -0.17337266  0.07623608  0.4798390
+## Petal.Width   0.35828920 -0.07548102  0.54583143 -0.7536574
+## Sepal.Length  0.36138659  0.65658877 -0.58202985 -0.3154872
+## Sepal.Width  -0.08452251  0.73016143  0.59791083  0.3197231
+## Importance of components:
+##                           PC1     PC2    PC3     PC4
+## Standard deviation     2.0563 0.49262 0.2797 0.15439
+## Proportion of Variance 0.9246 0.05307 0.0171 0.00521
+## Cumulative Proportion  0.9246 0.97769 0.9948 1.00000</code></pre>
+</div>
+<div id="_predict_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+predict<a href="#_predict_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>preds &lt;- graph$predict(task)
+
+preds</code></pre>
+<pre><code>## $classif.rpart.output
+## &lt;PredictionClassif&gt; for 150 observations:
+##     row_ids     truth  response
+##           1    setosa    setosa
+##           2    setosa    setosa
+##           3    setosa    setosa
+## ---                            
+##         148 virginica virginica
+##         149 virginica virginica
+##         150 virginica virginica</code></pre>
+</div>
+<div id="_rpartresults_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+rpart.results<a href="#_rpartresults_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>graph$state$classif.rpart$model %&gt;% summary()</code></pre>
+<pre><code>## Call:
+## rpart::rpart(formula = task$formula(), data = task$data(), xval = 0)
+##   n= 150 
+## 
+##     CP nsplit rel error
+## 1 0.50      0      1.00
+## 2 0.42      1      0.50
+## 3 0.01      2      0.08
+## 
+## Variable importance
+## PC1 PC2 PC3 PC4 
+##  76  16   5   3 
+## 
+## Node number 1: 150 observations,    complexity param=0.5
+##   predicted class=setosa      expected loss=0.6666667  P(node) =1
+##     class counts:    50    50    50
+##    probabilities: 0.333 0.333 0.333 
+##   left son=2 (50 obs) right son=3 (100 obs)
+##   Primary splits:
+##       PC1 &lt; -1.553145  to the left,  improve=50.000000, (0 missing)
+##       PC2 &lt; -0.2525312 to the right, improve= 8.833619, (0 missing)
+##       PC3 &lt; 0.2814886  to the left,  improve= 7.539683, (0 missing)
+##       PC4 &lt; -0.1267052 to the right, improve= 3.717799, (0 missing)
+##   Surrogate splits:
+##       PC2 &lt; 0.5701557  to the right, agree=0.7, adj=0.1, (0 split)
+## 
+## Node number 2: 50 observations
+##   predicted class=setosa      expected loss=0  P(node) =0.3333333
+##     class counts:    50     0     0
+##    probabilities: 1.000 0.000 0.000 
+## 
+## Node number 3: 100 observations,    complexity param=0.42
+##   predicted class=versicolor  expected loss=0.5  P(node) =0.6666667
+##     class counts:     0    50    50
+##    probabilities: 0.000 0.500 0.500 
+##   left son=6 (44 obs) right son=7 (56 obs)
+##   Primary splits:
+##       PC1 &lt; 1.142805   to the left,  improve=35.795450, (0 missing)
+##       PC3 &lt; 0.09944118 to the left,  improve= 9.459459, (0 missing)
+##       PC2 &lt; -0.2493429 to the left,  improve= 6.876061, (0 missing)
+##       PC4 &lt; -0.1267052 to the right, improve= 5.490578, (0 missing)
+##   Surrogate splits:
+##       PC2 &lt; -0.2493429 to the left,  agree=0.72, adj=0.364, (0 split)
+##       PC3 &lt; 0.09944118 to the left,  agree=0.63, adj=0.159, (0 split)
+##       PC4 &lt; 0.0166062  to the right, agree=0.60, adj=0.091, (0 split)
+## 
+## Node number 6: 44 observations
+##   predicted class=versicolor  expected loss=0.02272727  P(node) =0.2933333
+##     class counts:     0    43     1
+##    probabilities: 0.000 0.977 0.023 
+## 
+## Node number 7: 56 observations
+##   predicted class=virginica   expected loss=0.125  P(node) =0.3733333
+##     class counts:     0     7    49
+##    probabilities: 0.000 0.125 0.875</code></pre>
+</div>
+<p>Notice, this autoplot method within mlr3viz only works for tasks of
+type “cluster”. We get an Error otherwise for an unknown plot type.</p>
+<div id="_autoplotpcamlr3viz_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+autoplot.pca.mlr3viz<a href="#_autoplotpcamlr3viz_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>autoplot(preds, task, type = &quot;pca&quot;)</code></pre>
+<pre><code>## Error: Unknown plot type &#39;pca&#39;</code></pre>
+</div>
+<p>We can test this out here. Unsure of why this is not styled using
+default ggplot2 <code>geom_point</code> styling correctly on
+Windows.</p>
+<div id="_auoplotpcamlr3viztaskclust_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+auoplot.pca.mlr3viz.taskclust<a href="#_auoplotpcamlr3viztaskclust_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>task_clust &lt;- tsk(&quot;usarrests&quot;)
+
+graph_clust &lt;- po(&quot;pca&quot;) %&gt;&gt;%
+  po(&quot;learner&quot;, lrn(&quot;clust.kmeans&quot;), centers = 3)
+
+graph_clust$train(task_clust)
+
+preds_clust &lt;- graph_clust$predict(task_clust)
+
+# mlr3viz:::autoplot.PredictionClust(preds_clust$clust.kmeans.output, task, type = &quot;pca&quot;)
+autoplot(preds_clust$clust.kmeans.output, task_clust, type = &quot;pca&quot;)</code></pre>
+<p><img src="assets/img/mlr3-pipelines/auoplot.pca.mlr3viz.taskclust-1.png" width="672" /></p>
+<pre><code>## $clust.kmeans.output
+## NULL</code></pre>
+</div>
+</div>
+<div id="reverse-engineer-ggplotautoplot-of-class-prcomp"
+class="section level2 hasAnchor">
+<h2 class="hasAnchor">Reverse Engineer ggplot::autoplot of class
+prcomp<a href="#reverse-engineer-ggplotautoplot-of-class-prcomp"
+class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>How do we extract the core PCA calculation and plotting matrix out of
+this function call to recreate a graph like this?</p>
+<div id="_autoplotpca_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+autoplot.pca<a href="#_autoplotpca_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>autoplot(stats::prcomp(iris[-5], scale. = TRUE), data = iris, colour = &#39;Species&#39;)</code></pre>
+<img src="assets/img/mlr3-pipelines/autoplot.pca-1.png" width="672" />
+</div>
+<div id="_autoplotprcomp_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+autoplot.prcomp<a href="#_autoplotprcomp_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>ggfortify:::autoplot.prcomp</code></pre>
+<pre><code>## function (object, data = NULL, scale = 1, x = 1, y = 2, variance_percentage = TRUE, 
+##     ...) 
+## {
+##     plot.data &lt;- ggplot2::fortify(object, data = data)
+##     plot.data$rownames &lt;- rownames(plot.data)
+##     if (is_derived_from(object, &quot;prcomp&quot;)) {
+##         ve &lt;- object$sdev^2/sum(object$sdev^2)
+##         PC &lt;- paste0(&quot;PC&quot;, c(x, y))
+##         x.column &lt;- PC[1]
+##         y.column &lt;- PC[2]
+##         loadings.column &lt;- &quot;rotation&quot;
+##         lam &lt;- object$sdev[c(x, y)]
+##         lam &lt;- lam * sqrt(nrow(plot.data))
+##     }
+##     else if (is_derived_from(object, &quot;princomp&quot;)) {
+##         ve &lt;- object$sdev^2/sum(object$sdev^2)
+##         PC &lt;- paste0(&quot;Comp.&quot;, c(x, y))
+##         x.column &lt;- PC[1]
+##         y.column &lt;- PC[2]
+##         loadings.column &lt;- &quot;loadings&quot;
+##         lam &lt;- object$sdev[c(x, y)]
+##         lam &lt;- lam * sqrt(nrow(plot.data))
+##     }
+##     else if (is_derived_from(object, &quot;factanal&quot;)) {
+##         if (is.null(attr(object, &quot;covariance&quot;))) {
+##             p &lt;- nrow(object$loading)
+##             ve &lt;- colSums(object$loading^2)/p
+##         }
+##         else ve &lt;- NULL
+##         PC &lt;- paste0(&quot;Factor&quot;, c(x, y))
+##         x.column &lt;- PC[1]
+##         y.column &lt;- PC[2]
+##         scale &lt;- 0
+##         loadings.column &lt;- &quot;loadings&quot;
+##     }
+##     else if (is_derived_from(object, &quot;lfda&quot;)) {
+##         ve &lt;- NULL
+##         PC &lt;- paste0(&quot;PC&quot;, c(x, y))
+##         x.column &lt;- PC[1]
+##         y.column &lt;- PC[2]
+##         scale &lt;- 0
+##         loadings.column &lt;- NULL
+##     }
+##     else {
+##         stop(paste0(&quot;Unsupported class for autoplot.pca_common: &quot;, 
+##             class(object)))
+##     }
+##     if (scale != 0) {
+##         lam &lt;- lam^scale
+##         plot.data[, c(x.column, y.column)] &lt;- t(t(plot.data[, 
+##             c(x.column, y.column)])/lam)
+##     }
+##     plot.columns &lt;- unique(c(x.column, y.column, colnames(plot.data)))
+##     plot.data &lt;- plot.data[, plot.columns]
+##     if (!is.null(loadings.column)) {
+##         loadings.data &lt;- as.data.frame(object[[loadings.column]][, 
+##             ])
+##         loadings.data$rownames &lt;- rownames(loadings.data)
+##         loadings.columns &lt;- unique(c(x.column, y.column, colnames(loadings.data)))
+##         loadings.data &lt;- loadings.data[, loadings.columns]
+##     }
+##     else {
+##         loadings.data &lt;- NULL
+##     }
+##     if (is.null(ve) | !variance_percentage) {
+##         labs &lt;- PC
+##     }
+##     else {
+##         ve &lt;- ve[c(x, y)]
+##         labs &lt;- paste0(PC, &quot; (&quot;, round(ve * 100, 2), &quot;%)&quot;)
+##     }
+##     xlab &lt;- labs[1]
+##     ylab &lt;- labs[2]
+##     p &lt;- ggbiplot(plot.data = plot.data, loadings.data = loadings.data, 
+##         xlab = xlab, ylab = ylab, ...)
+##     return(p)
+## }
+## &lt;bytecode: 0x13a763f98&gt;
+## &lt;environment: namespace:ggfortify&gt;</code></pre>
+</div>
+<div id="_fortifyprcomp_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+fortify.prcomp<a href="#_fortifyprcomp_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code># sloop::s3_get_method(&quot;fortify.prcomp&quot;)
+ggfortify:::fortify.prcomp</code></pre>
+<pre><code>## function (model, data = NULL, ...) 
+## {
+##     if (is(model, &quot;prcomp&quot;)) {
+##         d &lt;- as.data.frame(model$x)
+##         values &lt;- model$x %*% t(model$rotation)
+##     }
+##     else if (is(model, &quot;princomp&quot;)) {
+##         d &lt;- as.data.frame(model$scores)
+##         values &lt;- model$scores %*% t(model$loadings[, ])
+##     }
+##     else {
+##         stop(paste0(&quot;Unsupported class for fortify.pca_common: &quot;, 
+##             class(model)))
+##     }
+##     values &lt;- ggfortify::unscale(values, center = model$center, 
+##         scale = model$scale)
+##     values &lt;- cbind_wraps(data, values)
+##     d &lt;- cbind_wraps(values, d)
+##     post_fortify(d)
+## }
+## &lt;bytecode: 0x13a7704d8&gt;
+## &lt;environment: namespace:ggfortify&gt;</code></pre>
+</div>
+<div id="_unscale_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+unscale<a href="#_unscale_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>ggfortify::unscale</code></pre>
+<pre><code>## function (data, center = NULL, scale = NULL) 
+## {
+##     if (is.null(scale)) {
+##         scale &lt;- attr(data, &quot;scaled:scale&quot;)
+##     }
+##     if (is.null(center)) {
+##         center &lt;- attr(data, &quot;scaled:center&quot;)
+##     }
+##     if (!is.null(scale) &amp;&amp; !is.logical(scale)) {
+##         data &lt;- base::scale(data, center = FALSE, scale = 1/scale)
+##     }
+##     if (!is.null(center) &amp;&amp; !is.logical(center)) {
+##         data &lt;- base::scale(data, center = -center, scale = FALSE)
+##     }
+##     as.data.frame(data)
+## }
+## &lt;bytecode: 0x13a775358&gt;
+## &lt;environment: namespace:ggfortify&gt;</code></pre>
+</div>
+<div id="_core-logic_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+core-logic<a href="#_core-logic_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>cols_clusters &lt;- c(&quot;Species&quot;)
+
+data &lt;- iris
+cols_selected &lt;- names(data)[! colnames(data) %in% cols_clusters]
+
+model &lt;- prcomp(data[, cols_selected], scale. = TRUE)
+
+# unscaling via `ggfortify::unscale`
+values &lt;- model$x %*% t(model$rotation)
+values &lt;- scale(values, center = FALSE, scale = 1/model$scale)
+values &lt;- scale(values, center = -model$center, scale = FALSE)
+
+plot.data &lt;- cbind(values, data[cols_clusters], model$x)</code></pre>
+</div>
+<div id="_core-plot_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+core-plot<a href="#_core-plot_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>#&#39; Plot PCA
+#&#39;
+#&#39; @param model PCA-like instance
+#&#39; @param pcs The PCs to plot
+#&#39; @param data Joined to fitting result if provided.
+#&#39; @param scale scaling parameter, disabled by 0
+#&#39; @param variance_percentage show the variance explained by the principal component?
+#&#39; @param ... other arguments passed to [ggbiplot()]
+scale &lt;- 1
+variance_percentage &lt;- TRUE
+pcs &lt;- 1:2
+
+# variance explained
+ve &lt;- model$sdev^2/sum(model$sdev^2)
+loadings.column &lt;- &quot;rotation&quot;
+lam &lt;- model$sdev[pcs]
+lam &lt;- lam * sqrt(nrow(plot.data))
+cols_pcs &lt;- paste0(&quot;PC&quot;, pcs)
+# scaled PCA values
+if (scale != 0) {
+  lam &lt;- lam^scale
+  plot.data[, cols_pcs] &lt;- t(t(plot.data[, cols_pcs])/lam)
+}
+loadings.data &lt;- as.data.frame(model$rotation)
+
+labs &lt;- paste0(cols_pcs, &quot; (&quot;, round(ve[pcs] * 100, 2), &quot;%)&quot;)</code></pre>
+</div>
+<div id="_ggbiplot_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+ggbiplot<a href="#_ggbiplot_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code># ggbiplot(plot.data = plot.data, loadings.data = loadings.data, xlab = labs[1], ylab = labs[2], ...)
+
+ggbiplot(
+  plot.data = plot.data[c(cols_pcs, cols_clusters)],
+  loadings.data = loadings.data[cols_pcs], 
+  xlab = labs[1], ylab = labs[2], colour = &quot;Species&quot;
+)</code></pre>
+<img src="assets/img/mlr3-pipelines/ggbiplot-1.png" width="672" />
+</div>
+<div id="_ggplot_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+ggplot<a href="#_ggplot_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>ggplot(plot.data[c(cols_pcs, cols_clusters)]) +
+  geom_point(aes(x = PC1, y = PC2, color = Species)) +
+  labs(x = labs[1], y = labs[2])</code></pre>
+<img src="assets/img/mlr3-pipelines/ggplot-1.png" width="672" />
+</div>
+<div id="_geom_scattermore_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+geom_scattermore<a href="#_geom_scattermore_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>ggplot(plot.data[c(cols_pcs, cols_clusters)]) +
+  geom_scattermore(aes(x = PC1, y = PC2, color = Species), pointsize = 2) +
+  labs(x = labs[1], y = labs[2])</code></pre>
+<img src="assets/img/mlr3-pipelines/geom_scattermore-1.png" width="672" />
+</div>
+</div>
+<div id="scattermore-mlr3-pipeline" class="section level2 hasAnchor">
+<h2 class="hasAnchor">Scattermore + mlr3 pipeline<a
+href="#scattermore-mlr3-pipeline" class="anchor-section"
+aria-label="Anchor link to header"></a></h2>
+<p>Plotting lots of data.</p>
+<div id="prcomp-internals" class="section level3 hasAnchor">
+<h3 class="hasAnchor">prcomp Internals<a href="#prcomp-internals"
+class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>It may be smarter to directly pass <code>retx = TRUE</code> to the
+PipeOp <code>po("pca")</code> and grabbing from
+<code>graph$state$pca$x</code> instead of re-writing core logic. This
+way, <code>x</code> is only calculated once. This can be tested on large
+data to determine the performance trade off (e.g. storing in mlr3
+<code>graph</code> object).</p>
+<div id="_prcompdefault_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+prcomp.default<a href="#_prcompdefault_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>sloop::s3_get_method(&quot;prcomp.default&quot;)</code></pre>
+<pre><code>## function (x, retx = TRUE, center = TRUE, scale. = FALSE, tol = NULL, 
+##     rank. = NULL, ...) 
+## {
+##     chkDots(...)
+##     x &lt;- as.matrix(x)
+##     x &lt;- scale(x, center = center, scale = scale.)
+##     cen &lt;- attr(x, &quot;scaled:center&quot;)
+##     sc &lt;- attr(x, &quot;scaled:scale&quot;)
+##     if (any(sc == 0)) 
+##         stop(&quot;cannot rescale a constant/zero column to unit variance&quot;)
+##     n &lt;- nrow(x)
+##     p &lt;- ncol(x)
+##     k &lt;- if (!is.null(rank.)) {
+##         stopifnot(length(rank.) == 1, is.finite(rank.), as.integer(rank.) &gt; 
+##             0)
+##         min(as.integer(rank.), n, p)
+##     }
+##     else min(n, p)
+##     s &lt;- svd(x, nu = 0, nv = k)
+##     j &lt;- seq_len(k)
+##     s$d &lt;- s$d/sqrt(max(1, n - 1))
+##     if (!is.null(tol)) {
+##         rank &lt;- sum(s$d &gt; (s$d[1L] * tol))
+##         if (rank &lt; k) {
+##             j &lt;- seq_len(k &lt;- rank)
+##             s$v &lt;- s$v[, j, drop = FALSE]
+##         }
+##     }
+##     dimnames(s$v) &lt;- list(colnames(x), paste0(&quot;PC&quot;, j))
+##     r &lt;- list(sdev = s$d, rotation = s$v, center = cen %||% FALSE, 
+##         scale = sc %||% FALSE)
+##     if (retx) 
+##         r$x &lt;- x %*% s$v
+##     class(r) &lt;- &quot;prcomp&quot;
+##     r
+## }
+## &lt;bytecode: 0x11b3b7ee8&gt;
+## &lt;environment: namespace:stats&gt;</code></pre>
+</div>
+<div id="_prcompformula_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+prcomp.formula<a href="#_prcompformula_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>sloop::s3_get_method(&quot;prcomp.formula&quot;)</code></pre>
+<pre><code>## function (formula, data = NULL, subset, na.action, ...) 
+## {
+##     mt &lt;- terms(formula, data = data)
+##     if (attr(mt, &quot;response&quot;) &gt; 0L) 
+##         stop(&quot;response not allowed in formula&quot;)
+##     cl &lt;- match.call()
+##     mf &lt;- match.call(expand.dots = FALSE)
+##     mf$... &lt;- NULL
+##     mf[[1L]] &lt;- quote(stats::model.frame)
+##     mf &lt;- eval.parent(mf)
+##     if (.check_vars_numeric(mf)) 
+##         stop(&quot;PCA applies only to numerical variables&quot;)
+##     na.act &lt;- attr(mf, &quot;na.action&quot;)
+##     mt &lt;- attr(mf, &quot;terms&quot;)
+##     attr(mt, &quot;intercept&quot;) &lt;- 0L
+##     x &lt;- model.matrix(mt, mf)
+##     res &lt;- prcomp.default(x, ...)
+##     cl[[1L]] &lt;- as.name(&quot;prcomp&quot;)
+##     res$call &lt;- cl
+##     if (!is.null(na.act)) {
+##         res$na.action &lt;- na.act
+##         if (!is.null(sc &lt;- res$x)) 
+##             res$x &lt;- napredict(na.act, sc)
+##     }
+##     res
+## }
+## &lt;bytecode: 0x13c6714b0&gt;
+## &lt;environment: namespace:stats&gt;</code></pre>
+</div>
+</div>
+<div id="pca-pipeop" class="section level3 hasAnchor">
+<h3 class="hasAnchor">PCA Pipeop<a href="#pca-pipeop"
+class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="_pcaresultskeep_results_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+pca.results.keep_results<a href="#_pcaresultskeep_results_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code># methods that do not work 
+# graph_pca &lt;- po(&quot;pca&quot;, param_vals = list(retx = TRUE)) %&gt;&gt;%
+# graph_pca$param_set$values$pca.retx &lt;- TRUE
+
+graph_pca &lt;- po(&quot;pca&quot;) %&gt;&gt;%
+  po(&quot;learner&quot;, lrn(&quot;classif.rpart&quot;))
+
+graph_pca$keep_results &lt;- TRUE
+
+graph_pca$train(task)
+
+graph_pca$pipeops$pca$.result</code></pre>
+<pre><code>## $classif.rpart.output
+## NULL
+## 
+## $output
+## &lt;TaskClassif:iris&gt; (150 x 5): Iris Flowers
+## * Target: Species
+## * Properties: multiclass
+## * Features (4):
+##   - dbl (4): PC1, PC2, PC3, PC4</code></pre>
+</div>
+<div id="_pcaresultoutputdata_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+pca.result.output.data<a href="#_pcaresultoutputdata_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>graph_pca$pipeops$pca$.result$output$data()</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Species"],"name":[1],"type":["fct"],"align":["left"]},{"label":["PC1"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["PC2"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["PC3"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["PC4"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"setosa","2":"-2.684125626","3":"0.319397247","4":"-0.027914828","5":"-0.0022624371"},{"1":"setosa","2":"-2.714141687","3":"-0.177001225","4":"-0.210464272","5":"-0.0990265503"},{"1":"setosa","2":"-2.888990569","3":"-0.144949426","4":"0.017900256","5":"-0.0199683897"},{"1":"setosa","2":"-2.745342856","3":"-0.318298979","4":"0.031559374","5":"0.0755758166"},{"1":"setosa","2":"-2.728716537","3":"0.326754513","4":"0.090079241","5":"0.0612585926"},{"1":"setosa","2":"-2.280859633","3":"0.741330449","4":"0.168677658","5":"0.0242008576"},{"1":"setosa","2":"-2.820537751","3":"-0.089461385","4":"0.257892158","5":"0.0481431065"},{"1":"setosa","2":"-2.626144973","3":"0.163384960","4":"-0.021879318","5":"0.0452978706"},{"1":"setosa","2":"-2.886382732","3":"-0.578311754","4":"0.020759570","5":"0.0267447358"},{"1":"setosa","2":"-2.672755798","3":"-0.113774246","4":"-0.197632725","5":"0.0562954013"},{"1":"setosa","2":"-2.506947091","3":"0.645068899","4":"-0.075318009","5":"0.0150199245"},{"1":"setosa","2":"-2.612755231","3":"0.014729939","4":"0.102150260","5":"0.1563792078"},{"1":"setosa","2":"-2.786109266","3":"-0.235112000","4":"-0.206844430","5":"0.0078879115"},{"1":"setosa","2":"-3.223803744","3":"-0.511394587","4":"0.061299672","5":"0.0216798118"},{"1":"setosa","2":"-2.644750390","3":"1.178764636","4":"-0.151627524","5":"-0.1592097177"},{"1":"setosa","2":"-2.386039034","3":"1.338062330","4":"0.277776903","5":"-0.0065515459"},{"1":"setosa","2":"-2.623527875","3":"0.810679514","4":"0.138183228","5":"-0.1677347372"},{"1":"setosa","2":"-2.648296706","3":"0.311849145","4":"0.026668316","5":"-0.0776281796"},{"1":"setosa","2":"-2.199820324","3":"0.872839039","4":"-0.120305523","5":"-0.0270518681"},{"1":"setosa","2":"-2.587986400","3":"0.513560309","4":"0.213665172","5":"0.0662726502"},{"1":"setosa","2":"-2.310256215","3":"0.391345936","4":"-0.239444043","5":"0.0150707908"},{"1":"setosa","2":"-2.543705229","3":"0.432996063","4":"0.208457232","5":"-0.0410654027"},{"1":"setosa","2":"-3.215939416","3":"0.133468070","4":"0.292396751","5":"-0.0044821251"},{"1":"setosa","2":"-2.302733182","3":"0.098708855","4":"0.039123259","5":"-0.1483525893"},{"1":"setosa","2":"-2.355754049","3":"-0.037281860","4":"0.125021083","5":"0.3003309039"},{"1":"setosa","2":"-2.506668907","3":"-0.146016880","4":"-0.253420042","5":"-0.0346074722"},{"1":"setosa","2":"-2.468820073","3":"0.130951489","4":"0.094910576","5":"-0.0574497158"},{"1":"setosa","2":"-2.562319906","3":"0.367718857","4":"-0.078494205","5":"0.0141727423"},{"1":"setosa","2":"-2.639534715","3":"0.312039980","4":"-0.145908896","5":"-0.0657834667"},{"1":"setosa","2":"-2.631989387","3":"-0.196961225","4":"0.040771079","5":"0.1239833064"},{"1":"setosa","2":"-2.587398477","3":"-0.204318491","4":"-0.077222989","5":"0.0604622767"},{"1":"setosa","2":"-2.409932497","3":"0.410924264","4":"-0.145524972","5":"-0.2316284917"},{"1":"setosa","2":"-2.648862334","3":"0.813363820","4":"0.225669150","5":"0.2813723471"},{"1":"setosa","2":"-2.598736749","3":"1.093145759","4":"0.157810813","5":"0.0953488583"},{"1":"setosa","2":"-2.636926878","3":"-0.121322348","4":"-0.143049582","5":"-0.0190703413"},{"1":"setosa","2":"-2.866241652","3":"0.069364472","4":"-0.164332307","5":"-0.1625984463"},{"1":"setosa","2":"-2.625238050","3":"0.599370021","4":"-0.268350376","5":"-0.1764412129"},{"1":"setosa","2":"-2.800684115","3":"0.268643738","4":"0.093699082","5":"0.1681730544"},{"1":"setosa","2":"-2.980502044","3":"-0.487958344","4":"0.072927046","5":"0.0107331474"},{"1":"setosa","2":"-2.590006314","3":"0.229043837","4":"-0.080082303","5":"0.0137491513"},{"1":"setosa","2":"-2.770102426","3":"0.263527534","4":"0.077247693","5":"-0.0940633590"},{"1":"setosa","2":"-2.849368705","3":"-0.940960574","4":"-0.349230377","5":"-0.3199874870"},{"1":"setosa","2":"-2.997406547","3":"-0.341926057","4":"0.192509212","5":"0.0746777682"},{"1":"setosa","2":"-2.405614485","3":"0.188871429","4":"0.263867946","5":"-0.1762088905"},{"1":"setosa","2":"-2.209489238","3":"0.436663142","4":"0.298742746","5":"0.1828425025"},{"1":"setosa","2":"-2.714451427","3":"-0.250208204","4":"-0.097678144","5":"-0.1428435736"},{"1":"setosa","2":"-2.538148259","3":"0.503771144","4":"0.166705637","5":"0.1896222914"},{"1":"setosa","2":"-2.839462168","3":"-0.227945569","4":"0.083726849","5":"0.0595642283"},{"1":"setosa","2":"-2.543085750","3":"0.579410022","4":"-0.017115024","5":"0.0465686438"},{"1":"setosa","2":"-2.703359782","3":"0.107706082","4":"-0.089294008","5":"-0.0346583385"},{"1":"versicolor","2":"1.284825689","3":"0.685160470","4":"-0.406568025","5":"-0.0185252879"},{"1":"versicolor","2":"0.932488532","3":"0.318333638","4":"-0.018014187","5":"-0.0005665121"},{"1":"versicolor","2":"1.464302322","3":"0.504262815","4":"-0.338325765","5":"0.0016531759"},{"1":"versicolor","2":"0.183317720","3":"-0.827959012","4":"-0.179591392","5":"-0.0935668402"},{"1":"versicolor","2":"1.088103258","3":"0.074590675","4":"-0.307757896","5":"-0.1120205742"},{"1":"versicolor","2":"0.641669084","3":"-0.418246872","4":"0.041076091","5":"0.2431167665"},{"1":"versicolor","2":"1.095060663","3":"0.283468270","4":"0.169810240","5":"0.0835565724"},{"1":"versicolor","2":"-0.749122670","3":"-1.004890961","4":"0.012302919","5":"0.0179077226"},{"1":"versicolor","2":"1.044131826","3":"0.228361900","4":"-0.415336085","5":"0.0391345020"},{"1":"versicolor","2":"-0.008745404","3":"-0.723081905","4":"0.281141431","5":"0.0056189179"},{"1":"versicolor","2":"-0.507840884","3":"-1.265971191","4":"-0.269817183","5":"-0.0455624408"},{"1":"versicolor","2":"0.511698557","3":"-0.103981235","4":"0.130547750","5":"-0.0507192325"},{"1":"versicolor","2":"0.264976508","3":"-0.550036464","4":"-0.694146830","5":"-0.0571855195"},{"1":"versicolor","2":"0.984934510","3":"-0.124817854","4":"-0.062114408","5":"0.1694962546"},{"1":"versicolor","2":"-0.173925372","3":"-0.254854209","4":"0.090457691","5":"-0.1252172921"},{"1":"versicolor","2":"0.927860781","3":"0.467179494","4":"-0.314620976","5":"-0.0998031365"},{"1":"versicolor","2":"0.660283762","3":"-0.352969666","4":"0.328027528","5":"0.1878786215"},{"1":"versicolor","2":"0.236104993","3":"-0.333610767","4":"-0.271161837","5":"0.2137573696"},{"1":"versicolor","2":"0.944733728","3":"-0.543145551","4":"-0.499519046","5":"-0.2571921772"},{"1":"versicolor","2":"0.045226976","3":"-0.583834377","4":"-0.235002105","5":"0.0415766476"},{"1":"versicolor","2":"1.116283177","3":"-0.084616852","4":"0.459620991","5":"0.0750315529"},{"1":"versicolor","2":"0.357888418","3":"-0.068925032","4":"-0.229853888","5":"-0.1229976041"},{"1":"versicolor","2":"1.298183875","3":"-0.327787308","4":"-0.347854352","5":"-0.0008883706"},{"1":"versicolor","2":"0.921728922","3":"-0.182737794","4":"-0.231071778","5":"0.2882554293"},{"1":"versicolor","2":"0.714853326","3":"0.149055944","4":"-0.321800937","5":"-0.0417197556"},{"1":"versicolor","2":"0.900174373","3":"0.328504474","4":"-0.316209074","5":"-0.1002267276"},{"1":"versicolor","2":"1.332024437","3":"0.244440876","4":"-0.521702780","5":"-0.0353331921"},{"1":"versicolor","2":"1.557802155","3":"0.267495447","4":"-0.164920984","5":"-0.0699692823"},{"1":"versicolor","2":"0.813290650","3":"-0.163350301","4":"0.035424505","5":"0.0297114340"},{"1":"versicolor","2":"-0.305583778","3":"-0.368262190","4":"-0.318491581","5":"-0.0745696136"},{"1":"versicolor","2":"-0.068126492","3":"-0.705172132","4":"-0.244213810","5":"-0.0068308422"},{"1":"versicolor","2":"-0.189622472","3":"-0.680286764","4":"-0.306420561","5":"0.0205510016"},{"1":"versicolor","2":"0.136428712","3":"-0.314032438","4":"-0.177242766","5":"-0.0329419128"},{"1":"versicolor","2":"1.380026436","3":"-0.420954287","4":"0.016167128","5":"0.1783044629"},{"1":"versicolor","2":"0.588006443","3":"-0.484287420","4":"0.444433499","5":"0.2509760601"},{"1":"versicolor","2":"0.806858313","3":"0.194182315","4":"0.388963063","5":"0.1142072433"},{"1":"versicolor","2":"1.220690882","3":"0.407619594","4":"-0.237167010","5":"-0.0312171829"},{"1":"versicolor","2":"0.815095236","3":"-0.372037060","4":"-0.614720843","5":"-0.1540209998"},{"1":"versicolor","2":"0.245957680","3":"-0.268524397","4":"0.188366812","5":"0.1466745117"},{"1":"versicolor","2":"0.166413217","3":"-0.681926725","4":"-0.060009226","5":"-0.0296222195"},{"1":"versicolor","2":"0.464800288","3":"-0.670711545","4":"-0.024306856","5":"0.2696514282"},{"1":"versicolor","2":"0.890815198","3":"-0.034464444","4":"-0.009946933","5":"0.1534846663"},{"1":"versicolor","2":"0.230548024","3":"-0.404385848","4":"-0.229410241","5":"-0.0169303245"},{"1":"versicolor","2":"-0.704531759","3":"-1.012248228","4":"-0.105691149","5":"-0.0456133071"},{"1":"versicolor","2":"0.356981495","3":"-0.504910093","4":"0.016617170","5":"0.0987414793"},{"1":"versicolor","2":"0.331934480","3":"-0.212654684","4":"0.083204291","5":"0.2384754337"},{"1":"versicolor","2":"0.376215651","3":"-0.293218929","4":"0.077996351","5":"0.1311373808"},{"1":"versicolor","2":"0.642576008","3":"0.017738190","4":"-0.205394967","5":"0.0213776830"},{"1":"versicolor","2":"-0.906469865","3":"-0.756093367","4":"-0.012599648","5":"-0.2325348443"},{"1":"versicolor","2":"0.299000842","3":"-0.348897806","4":"0.010581660","5":"0.0511811717"},{"1":"virginica","2":"2.531192728","3":"-0.009849109","4":"0.760165427","5":"0.0290555728"},{"1":"virginica","2":"1.415235877","3":"-0.574916348","4":"0.296322527","5":"0.0153046739"},{"1":"virginica","2":"2.616676016","3":"0.343903151","4":"-0.110787883","5":"-0.0657720412"},{"1":"virginica","2":"1.971531053","3":"-0.179727904","4":"0.108424662","5":"0.2367909342"},{"1":"virginica","2":"2.350005920","3":"-0.040260947","4":"0.285389563","5":"0.0001706333"},{"1":"virginica","2":"3.397038736","3":"0.550836673","4":"-0.348437556","5":"0.1123716532"},{"1":"virginica","2":"0.521232244","3":"-1.192758727","4":"0.545659296","5":"0.0981266196"},{"1":"virginica","2":"2.932587069","3":"0.355500003","4":"-0.420239936","5":"0.2571910322"},{"1":"virginica","2":"2.321228817","3":"-0.243831502","4":"-0.348304395","5":"0.0786746130"},{"1":"virginica","2":"2.916750967","3":"0.782791949","4":"0.423335418","5":"-0.1109820710"},{"1":"virginica","2":"1.661774154","3":"0.242228408","4":"0.242440190","5":"-0.1210405518"},{"1":"virginica","2":"1.803401953","3":"-0.215637617","4":"-0.037648168","5":"-0.0780198444"},{"1":"virginica","2":"2.165591796","3":"0.216275585","4":"0.033326642","5":"-0.1630614782"},{"1":"virginica","2":"1.346163579","3":"-0.776818347","4":"0.281902882","5":"-0.1404408688"},{"1":"virginica","2":"1.585928224","3":"-0.539640714","4":"0.629029326","5":"-0.3295517284"},{"1":"virginica","2":"1.904456375","3":"0.119250692","4":"0.479639820","5":"-0.2196212627"},{"1":"virginica","2":"1.949689059","3":"0.041943260","4":"0.044186168","5":"0.1576819073"},{"1":"virginica","2":"3.487055364","3":"1.175739330","4":"0.133894874","5":"0.3092195730"},{"1":"virginica","2":"3.795645422","3":"0.257322973","4":"-0.513767764","5":"-0.0538460965"},{"1":"virginica","2":"1.300791713","3":"-0.761149636","4":"-0.344995038","5":"0.0458247549"},{"1":"virginica","2":"2.427817913","3":"0.378196013","4":"0.219119324","5":"-0.1854292644"},{"1":"virginica","2":"1.199001105","3":"-0.606091528","4":"0.511855509","5":"-0.0609591171"},{"1":"virginica","2":"3.499920039","3":"0.460674099","4":"-0.573182243","5":"0.1402279544"},{"1":"virginica","2":"1.388766132","3":"-0.204399327","4":"-0.064522757","5":"-0.1630409774"},{"1":"virginica","2":"2.275430504","3":"0.334990606","4":"0.286150091","5":"0.0603719696"},{"1":"virginica","2":"2.614090474","3":"0.560901355","4":"-0.205534524","5":"0.2407049865"},{"1":"virginica","2":"1.258508161","3":"-0.179704795","4":"0.045847704","5":"-0.1475038465"},{"1":"virginica","2":"1.291132059","3":"-0.116668651","4":"0.231256463","5":"-0.0040266077"},{"1":"virginica","2":"2.123608723","3":"-0.209729477","4":"0.154180024","5":"-0.0528273230"},{"1":"virginica","2":"2.388003016","3":"0.464639805","4":"-0.449530192","5":"0.2315240534"},{"1":"virginica","2":"2.841672778","3":"0.375269167","4":"-0.498898076","5":"0.0223364626"},{"1":"virginica","2":"3.230673661","3":"1.374165087","4":"-0.114548205","5":"0.2529019234"},{"1":"virginica","2":"2.159437642","3":"-0.217277579","4":"0.208763167","5":"-0.1281930656"},{"1":"virginica","2":"1.444161242","3":"-0.143413410","4":"-0.153233888","5":"0.1909963579"},{"1":"virginica","2":"1.781294810","3":"-0.499901681","4":"-0.172875189","5":"0.5054344118"},{"1":"virginica","2":"3.076499932","3":"0.688085678","4":"-0.335592292","5":"-0.3098280446"},{"1":"virginica","2":"2.144243314","3":"0.140064201","4":"0.734878937","5":"-0.0555419691"},{"1":"virginica","2":"1.905098149","3":"0.049300526","4":"0.162180236","5":"0.2212029369"},{"1":"virginica","2":"1.169326339","3":"-0.164990262","4":"0.281835840","5":"-0.0204617872"},{"1":"virginica","2":"2.107611143","3":"0.372287872","4":"0.027291132","5":"-0.2106217858"},{"1":"virginica","2":"2.314154705","3":"0.183651279","4":"0.322693747","5":"-0.2776537774"},{"1":"virginica","2":"1.922267801","3":"0.409203467","4":"0.113586596","5":"-0.5053049669"},{"1":"virginica","2":"1.415235877","3":"-0.574916348","4":"0.296322527","5":"0.0153046739"},{"1":"virginica","2":"2.563013375","3":"0.277862603","4":"0.292569525","5":"-0.0579127477"},{"1":"virginica","2":"2.418746183","3":"0.304798198","4":"0.504482664","5":"-0.2410910005"},{"1":"virginica","2":"1.944109795","3":"0.187532303","4":"0.177825091","5":"-0.4261959400"},{"1":"virginica","2":"1.527166615","3":"-0.375316983","4":"-0.121898172","5":"-0.2543674420"},{"1":"virginica","2":"1.764345717","3":"0.078858855","4":"0.130481631","5":"-0.1370012739"},{"1":"virginica","2":"1.900941614","3":"0.116627959","4":"0.723251563","5":"-0.0445953047"},{"1":"virginica","2":"1.390188862","3":"-0.282660938","4":"0.362909648","5":"0.1550386282"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+</div>
+<p>This output object <code>backend</code> is of class
+<code>"DataBackendCbind" "DataBackend" "R6"</code>.</p>
+<p>Unsure of exactly how it is storing the data.</p>
+<div id="_pcaresultoutputbackend_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+pca.result.output.backend<a href="#_pcaresultoutputbackend_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>graph_pca$pipeops$pca$.result$output$backend</code></pre>
+<pre><code>## &lt;DataBackendCbind&gt; (150x10)
+##  Sepal.Length Sepal.Width Petal.Length Petal.Width Species ..row_id       PC1
+##           5.1         3.5          1.4         0.2  setosa        1 -2.684126
+##           4.9         3.0          1.4         0.2  setosa        2 -2.714142
+##           4.7         3.2          1.3         0.2  setosa        3 -2.888991
+##           4.6         3.1          1.5         0.2  setosa        4 -2.745343
+##           5.0         3.6          1.4         0.2  setosa        5 -2.728717
+##           5.4         3.9          1.7         0.4  setosa        6 -2.280860
+##         PC2         PC3          PC4
+##   0.3193972 -0.02791483 -0.002262437
+##  -0.1770012 -0.21046427 -0.099026550
+##  -0.1449494  0.01790026 -0.019968390
+##  -0.3182990  0.03155937  0.075575817
+##   0.3267545  0.09007924  0.061258593
+##   0.7413304  0.16867766  0.024200858
+## [...] (144 rows omitted)</code></pre>
+</div>
+<p><code>state</code> is of exactly the same structure - with no
+<code>x</code> object
+(e.g. <code>graph_pca$pipeops$pca$.result$output$data()</code>) as
+above.</p>
+<div id="_pcastate_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+pca.state<a href="#_pcastate_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>graph$state$pca %&gt;% names()
+graph_pca$state$pca %&gt;% names()</code></pre>
+<pre><code>## [1] &quot;sdev&quot;          &quot;rotation&quot;      &quot;center&quot;        &quot;scale&quot;        
+## [5] &quot;dt_columns&quot;    &quot;affected_cols&quot; &quot;intasklayout&quot;  &quot;outtasklayout&quot;
+## [9] &quot;outtaskshell&quot; 
+## [1] &quot;sdev&quot;          &quot;rotation&quot;      &quot;center&quot;        &quot;scale&quot;        
+## [5] &quot;dt_columns&quot;    &quot;affected_cols&quot; &quot;intasklayout&quot;  &quot;outtasklayout&quot;
+## [9] &quot;outtaskshell&quot;</code></pre>
+</div>
+</div>
+<div id="customized-pca-pipeop" class="section level3 hasAnchor">
+<h3 class="hasAnchor">Customized PCA Pipeop<a
+href="#customized-pca-pipeop" class="anchor-section"
+aria-label="Anchor link to header"></a></h3>
+<p>We can create a customized <code>PipeOp</code> R6 class to store the
+prcomp <code>x</code> object w/out keeping the entire results of the
+pipeline.</p>
+<div id="_R6pipeop_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+R6.pipeop<a href="#_R6pipeop_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>PipeOpPCAX = R6::R6Class(&quot;PipeOpPCAX&quot;,
+  inherit = mlr3pipelines::PipeOpTaskPreproc,
+  public = list(
+    initialize = function(id = &quot;pca_x&quot;, param_vals = list()) {
+      ps = paradox::ParamSet$new(params = list(
+        ParamLgl$new(&quot;center&quot;, default = TRUE, tags = c(&quot;train&quot;, &quot;pca&quot;)),
+        ParamLgl$new(&quot;scale.&quot;, default = FALSE, tags = c(&quot;train&quot;, &quot;pca&quot;)),
+        ParamLgl$new(&quot;retx&quot;, default = TRUE, tags = c(&quot;train&quot;, &quot;pca&quot;)),
+        ParamInt$new(&quot;rank.&quot;, default = NULL, lower = 1, upper = Inf, special_vals = list(NULL), tags = c(&quot;train&quot;, &quot;pca&quot;))
+      ))
+      super$initialize(id, param_set = ps, param_vals = param_vals, feature_types = c(&quot;numeric&quot;, &quot;integer&quot;))
+    }
+  ),
+  private = list(
+    .train_dt = function(dt, levels, target) {
+      pcr = rlang::invoke(stats::prcomp, as.matrix(dt), .args = self$param_set$get_values(tags = &quot;pca&quot;))
+      self$state = pcr
+      pcr$x
+    },
+    .predict_dt = function(dt, levels) {
+      stats::predict(self$state, as.matrix(dt))
+    }
+  )
+)
+
+mlr_pipeops$add(&quot;pca_x&quot;, PipeOpPCAX)</code></pre>
+</div>
+<div id="_pca_x_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+pca_x<a href="#_pca_x_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>graph_pcax &lt;- po(&quot;pca_x&quot;, scale. = TRUE) %&gt;&gt;%
+  po(&quot;learner&quot;, lrn(&quot;classif.rpart&quot;))
+
+graph_pcax$train(task)</code></pre>
+<pre><code>## Warning: `invoke()` is deprecated as of rlang 0.4.0.
+## Please use `exec()` or `inject()` instead.
+## This warning is displayed once per session.
+## This happened PipeOp pca_x&#39;s $train()</code></pre>
+<pre><code>## $classif.rpart.output
+## NULL</code></pre>
+</div>
+<div id="_pca_xstate_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+pca_x.state<a href="#_pca_xstate_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>graph_pcax$pipeops$pca$.result
+
+graph_pcax$state$pca_x
+
+graph_pcax$state$pca_x$x %&gt;% head()</code></pre>
+<pre><code>## NULL
+## Standard deviations (1, .., p=4):
+## [1] 1.7083611 0.9560494 0.3830886 0.1439265
+## 
+## Rotation (n x k) = (4 x 4):
+##                     PC1         PC2        PC3        PC4
+## Petal.Length  0.5804131 -0.02449161  0.1421264 -0.8014492
+## Petal.Width   0.5648565 -0.06694199  0.6342727  0.5235971
+## Sepal.Length  0.5210659 -0.37741762 -0.7195664  0.2612863
+## Sepal.Width  -0.2693474 -0.92329566  0.2443818 -0.1235096
+##            PC1        PC2         PC3          PC4
+## [1,] -2.257141 -0.4784238 -0.12727962  0.024087508
+## [2,] -2.074013  0.6718827 -0.23382552  0.102662845
+## [3,] -2.356335  0.3407664  0.04405390  0.028282305
+## [4,] -2.291707  0.5953999  0.09098530 -0.065735340
+## [5,] -2.381863 -0.6446757  0.01568565 -0.035802870
+## [6,] -2.068701 -1.4842053  0.02687825  0.006586116</code></pre>
+</div>
+<p><em>Note:</em> transforming the PC data back to the original data via
+<code>ggfortify::unscale</code> is an unnecessary step that the autoplot
+function executes. The original data (other than the clusters that we
+color by) doesn’t even get used in the plot. If it’s necessary that we
+include the original data in our plots, we can select the columns as
+needed. Thus, we don’t need to do this in our plot function.</p>
+<p>Thus, the entire <em>unscaling</em> step can be removed.</p>
+</div>
+<div id="custom-pca-big-data-biplot" class="section level3 hasAnchor">
+<h3 class="hasAnchor">Custom PCA big data biplot<a
+href="#custom-pca-big-data-biplot" class="anchor-section"
+aria-label="Anchor link to header"></a></h3>
+<div id="_geom_scattermore_pca_po_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+geom_scattermore_pca_po<a href="#_geom_scattermore_pca_po_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>#&#39; Plot PCA from a `prcomp` result using geom_scattermore 
+#&#39;
+#&#39; @param model PCA-like instance
+#&#39; @param data Joined to fitting result if provided
+#&#39; @param color Cluster variable in `data` to color by
+#&#39; @param pcs The PCs to plot
+#&#39; @param scale scaling parameter, disabled by 0
+#&#39; @param variance_percentage show the variance explained by the principal component?
+geom_scattermore_pca_po &lt;- function(model, data, color, pcs = 1:2, scale = 1, variance_percentage = TRUE) {
+  # if using data.table data[,cols_clusters, with=F]
+  plot.data &lt;- cbind(data[cols_clusters], model$x)
+  # variance explained
+  ve &lt;- model$sdev^2/sum(model$sdev^2)
+  loadings.column &lt;- &quot;rotation&quot;
+  cols_pcs &lt;- paste0(&quot;PC&quot;, pcs)
+  # scaled PCA values
+  if (scale != 0) {
+    lam &lt;- model$sdev[pcs]
+    lam &lt;- lam * sqrt(nrow(model$x))
+    lam &lt;- lam^scale
+    plot.data[, cols_pcs] &lt;- t(t(plot.data[, cols_pcs])/lam)
+  }
+  loadings.data &lt;- as.data.frame(model$rotation)
+  labs &lt;- paste0(cols_pcs, &quot; (&quot;, round(ve[pcs] * 100, 2), &quot;%)&quot;)
+  g &lt;- ggplot(plot.data[c(cols_pcs, color)]) +
+    geom_scattermore(aes(x = PC1, y = PC2, color = get(color)), pointsize = 2) +
+    labs(x = labs[1], y = labs[2], color = color)
+  return(g)
+}</code></pre>
+</div>
+<div id="_pogeom_scattermore_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+po.geom_scattermore<a href="#_pogeom_scattermore_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>geom_scattermore_pca_po(graph_pcax$state$pca_x, data, color = &quot;Species&quot;)</code></pre>
+<img src="assets/img/mlr3-pipelines/po.geom_scattermore-1.png" width="672" />
+</div>
+<p>It may be justified to set <code>scale = 0</code> by default. There
+is not much in literature describing why the PCs are each, by default,
+multiplied by the standard deviation of the PCs times the square root of
+the number of observations. The <code>scale</code> parameter is then
+multiplied by this scaling.</p>
+<div id="_pogeom_scattermorescale0_" class="section level5 hasAnchor">
+<h5 class="hasAnchor">
+po.geom_scattermore.scale.0<a href="#_pogeom_scattermorescale0_" class="anchor-section" aria-label="Anchor link to header"></a>
+</h5>
+<pre class="r"><code>geom_scattermore_pca_po(graph_pcax$state$pca_x, data, color = &quot;Species&quot;, scale = 0)</code></pre>
+<img src="assets/img/mlr3-pipelines/po.geom_scattermore.scale.0-1.png" width="672" />
+</div>
+</div>
+</div>
+<div id="a-t-sne-example" class="section level2 hasAnchor">
+<h2 class="hasAnchor">A T-SNE Example<a href="#a-t-sne-example"
+class="anchor-section" aria-label="Anchor link to header"></a></h2>
+</div>
+<div id="a-umap-example" class="section level2 hasAnchor">
+<h2 class="hasAnchor">A UMAP Example<a href="#a-umap-example"
+class="anchor-section" aria-label="Anchor link to header"></a></h2>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("hide" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3,h4,h5,h6",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+
+</body>
+</html>
