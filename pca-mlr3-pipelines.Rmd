@@ -36,11 +36,21 @@ system(sprintf("gcp -u assets/style.css %s/assets/", output))
 
 knitr::knit_hooks$set(link = function(before, options) {
   if (before) {
-    paste0('<h6>', options$label, '</h6>')
+    paste0(
+      '<div id="_', gsub("\\.", "", options$label), '_" class="section level5 hasAnchor">',
+      '<h5 class="hasAnchor">', options$label,
+      '<a href="#_', gsub("\\.", "", options$label),
+      '_" class="anchor-section" aria-label="Anchor link to header"></a>',
+      '</h5>'
+    )
+  } else {
+    '</div>'
   }
 })
 knitr::opts_chunk$set(link = TRUE)
 ```
+
+## Setup
 
 ```{r packages, warning=FALSE}
 library(mlr3verse)
@@ -224,6 +234,8 @@ ggplot(plot.data[c(cols_pcs, cols_clusters)]) +
 
 Plotting lots of data.
 
+### prcomp Internals
+
 It may be smarter to directly pass `retx = TRUE` to the PipeOp `po("pca")` and grabbing from `graph$state$pca$x` instead of re-writing core logic. This way, `x` is only calculated once. This can be tested on large data to determine the performance trade off (e.g. storing in mlr3 `graph` object). 
 
 ```{r prcomp.default}
@@ -233,6 +245,8 @@ sloop::s3_get_method("prcomp.default")
 ```{r prcomp.formula}
 sloop::s3_get_method("prcomp.formula")
 ```
+
+### PCA Pipeop
 
 ```{r pca.results.keep_results}
 # methods that do not work 
@@ -320,6 +334,8 @@ graph_pcax$state$pca_x$x %>% head()
 *Note:* transforming the PC data back to the original data via `ggfortify::unscale` is an unnecessary step that the autoplot function executes. The original data (other than the clusters that we color by) doesn't even get used in the plot. If it's necessary that we include the original data in our plots, we can select the columns as needed. Thus, we don't need to do this in our plot function.
 
 Thus, the entire *unscaling* step can be removed.
+
+### Custom PCA big data biplot
 
 ```{r geom_scattermore_pca_po}
 #' Plot PCA from a `prcomp` result using geom_scattermore 
