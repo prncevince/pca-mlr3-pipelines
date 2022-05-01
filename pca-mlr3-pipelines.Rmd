@@ -1,0 +1,371 @@
+---
+title: PCA in mlr3 Pipelines
+output:
+  html_document:
+    anchor_sections: true
+    code_folding: "hide"
+    css: [assets/style.css]
+    df_print: "paged"
+    includes:
+      before_body: assets/style.html
+    lib_dir: docs/libs
+    math_method:
+      engine: katex
+    self_contained: FALSE
+    toc: true
+    toc_depth: 6
+    toc_float:
+      collapsed: false
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+options(digits.secs = 3)
+opts_chunk$set(echo = TRUE)
+opts_chunk$set(results = 'hold')
+opts_chunk$set(message = FALSE)
+
+output <- "docs"
+fig.path <- paste0(output, '/assets/img/', 'mlr3-pipelines/')
+
+if (!dir.exists(fig.path)) dir.create(fig.path, recursive = T)
+opts_chunk$set(fig.path = fig.path)
+
+if (!dir.exists(paste0(output, '/assets/'))) dir.create(paste0(output, '/assets/', recursive = T))
+system(sprintf("gcp -u assets/style.css %s/assets/", output))
+
+knitr::knit_hooks$set(link = function(before, options) {
+  if (before) {
+    paste0('<h6>', options$label, '</h6>')
+  }
+})
+knitr::opts_chunk$set(link = TRUE)
+```
+
+```{r packages, warning=FALSE}
+library(mlr3verse)
+library(data.table)
+library(future)
+library(igraph)
+library(ggfortify)
+library(scattermore)
+library(R6)
+library(mlr3pipelines)
+library(paradox)
+library(rlang)
+```
+
+```{r multicore}
+plan(multicore)
+```
+
+
+## A PCA Example
+
+Our goal here will be to extract the PCA matrix from the mlr3 pipeline. 
+
+This will allow us to create custom & performant plots as necessary. 
+
+```{r task}
+task <- tsk("iris")
+
+task
+
+task$task_type
+
+task$data()[, summary(Species)]
+```
+
+
+```{r pipeline}
+graph <- po("pca") %>>%
+  po("learner", lrn("classif.rpart"))
+
+graph
+
+graph$plot()
+```
+
+```{r train}
+graph$train(task)
+```
+
+```{r pca.results}
+graph$state$pca
+
+summary(graph$state$pca)
+```
+
+```{r predict}
+preds <- graph$predict(task)
+
+preds
+```
+
+```{r rpart.results}
+graph$state$classif.rpart$model %>% summary()
+```
+
+Notice, this autoplot method within mlr3viz only works for tasks of type "cluster".
+We get an Error otherwise for an unknown plot type.
+
+```{r autoplot.pca.mlr3viz, error=TRUE}
+autoplot(preds, task, type = "pca")
+```
+
+We can test this out here. Unsure of why this is not styled using default ggplot2 `geom_point` styling correctly on Windows.
+
+```{r auoplot.pca.mlr3viz.taskclust}
+task_clust <- tsk("usarrests")
+
+graph_clust <- po("pca") %>>%
+  po("learner", lrn("clust.kmeans"), centers = 3)
+
+graph_clust$train(task_clust)
+
+preds_clust <- graph_clust$predict(task_clust)
+
+# mlr3viz:::autoplot.PredictionClust(preds_clust$clust.kmeans.output, task, type = "pca")
+autoplot(preds_clust$clust.kmeans.output, task_clust, type = "pca")
+```
+
+
+## Reverse Engineer ggplot::autoplot of class prcomp
+
+How do we extract the core PCA calculation and plotting matrix out of this function call to recreate a graph like this?
+
+```{r autoplot.pca}
+autoplot(stats::prcomp(iris[-5], scale. = TRUE), data = iris, colour = 'Species')
+```
+
+```{r autoplot.prcomp}
+ggfortify:::autoplot.prcomp
+```
+
+
+```{r fortify.prcomp}
+# sloop::s3_get_method("fortify.prcomp")
+ggfortify:::fortify.prcomp
+```
+
+```{r unscale}
+ggfortify::unscale
+```
+
+```{r core-logic}
+cols_clusters <- c("Species")
+
+data <- iris
+cols_selected <- names(data)[! colnames(data) %in% cols_clusters]
+
+model <- prcomp(data[, cols_selected], scale. = TRUE)
+
+# unscaling via `ggfortify::unscale`
+values <- model$x %*% t(model$rotation)
+values <- scale(values, center = FALSE, scale = 1/model$scale)
+values <- scale(values, center = -model$center, scale = FALSE)
+
+plot.data <- cbind(values, data[cols_clusters], model$x)
+```
+
+```{r core-plot}
+#' Plot PCA
+#'
+#' @param model PCA-like instance
+#' @param pcs The PCs to plot
+#' @param data Joined to fitting result if provided.
+#' @param scale scaling parameter, disabled by 0
+#' @param variance_percentage show the variance explained by the principal component?
+#' @param ... other arguments passed to [ggbiplot()]
+scale <- 1
+variance_percentage <- TRUE
+pcs <- 1:2
+
+# variance explained
+ve <- model$sdev^2/sum(model$sdev^2)
+loadings.column <- "rotation"
+lam <- model$sdev[pcs]
+lam <- lam * sqrt(nrow(plot.data))
+cols_pcs <- paste0("PC", pcs)
+# scaled PCA values
+if (scale != 0) {
+  lam <- lam^scale
+  plot.data[, cols_pcs] <- t(t(plot.data[, cols_pcs])/lam)
+}
+loadings.data <- as.data.frame(model$rotation)
+
+labs <- paste0(cols_pcs, " (", round(ve[pcs] * 100, 2), "%)")
+```
+
+```{r ggbiplot}
+# ggbiplot(plot.data = plot.data, loadings.data = loadings.data, xlab = labs[1], ylab = labs[2], ...)
+
+ggbiplot(
+  plot.data = plot.data[c(cols_pcs, cols_clusters)],
+  loadings.data = loadings.data[cols_pcs], 
+  xlab = labs[1], ylab = labs[2], colour = "Species"
+)
+```
+
+```{r ggplot}
+ggplot(plot.data[c(cols_pcs, cols_clusters)]) +
+  geom_point(aes(x = PC1, y = PC2, color = Species)) +
+  labs(x = labs[1], y = labs[2])
+```
+
+```{r geom_scattermore}
+ggplot(plot.data[c(cols_pcs, cols_clusters)]) +
+  geom_scattermore(aes(x = PC1, y = PC2, color = Species), pointsize = 2) +
+  labs(x = labs[1], y = labs[2])
+```
+
+
+## Scattermore + mlr3 pipeline
+
+Plotting lots of data.
+
+It may be smarter to directly pass `retx = TRUE` to the PipeOp `po("pca")` and grabbing from `graph$state$pca$x` instead of re-writing core logic. This way, `x` is only calculated once. This can be tested on large data to determine the performance trade off (e.g. storing in mlr3 `graph` object). 
+
+```{r prcomp.default}
+sloop::s3_get_method("prcomp.default")
+```
+
+```{r prcomp.formula}
+sloop::s3_get_method("prcomp.formula")
+```
+
+```{r pca.results.keep_results}
+# methods that do not work 
+# graph_pca <- po("pca", param_vals = list(retx = TRUE)) %>>%
+# graph_pca$param_set$values$pca.retx <- TRUE
+
+graph_pca <- po("pca") %>>%
+  po("learner", lrn("classif.rpart"))
+
+graph_pca$keep_results <- TRUE
+
+graph_pca$train(task)
+
+graph_pca$pipeops$pca$.result
+```
+
+```{r pca.result.output.data}
+graph_pca$pipeops$pca$.result$output$data()
+```
+
+This output object `backend` is of class `"DataBackendCbind" "DataBackend" "R6"`. 
+
+Unsure of exactly how it is storing the data.
+
+```{r pca.result.output.backend}
+graph_pca$pipeops$pca$.result$output$backend
+```
+
+`state` is of exactly the same structure - with no `x` object (e.g. `graph_pca$pipeops$pca$.result$output$data()`) as above. 
+
+```{r pca.state}
+graph$state$pca %>% names()
+graph_pca$state$pca %>% names()
+```
+
+### Customized PCA Pipeop
+
+We can create a customized `PipeOp` R6 class to store the prcomp `x` object w/out keeping the entire results of the pipeline.
+
+```{r R6.pipeop}
+PipeOpPCAX = R6::R6Class("PipeOpPCAX",
+  inherit = mlr3pipelines::PipeOpTaskPreproc,
+  public = list(
+    initialize = function(id = "pca_x", param_vals = list()) {
+      ps = paradox::ParamSet$new(params = list(
+        ParamLgl$new("center", default = TRUE, tags = c("train", "pca")),
+        ParamLgl$new("scale.", default = FALSE, tags = c("train", "pca")),
+        ParamLgl$new("retx", default = TRUE, tags = c("train", "pca")),
+        ParamInt$new("rank.", default = NULL, lower = 1, upper = Inf, special_vals = list(NULL), tags = c("train", "pca"))
+      ))
+      super$initialize(id, param_set = ps, param_vals = param_vals, feature_types = c("numeric", "integer"))
+    }
+  ),
+  private = list(
+    .train_dt = function(dt, levels, target) {
+      pcr = rlang::invoke(stats::prcomp, as.matrix(dt), .args = self$param_set$get_values(tags = "pca"))
+      self$state = pcr
+      pcr$x
+    },
+    .predict_dt = function(dt, levels) {
+      stats::predict(self$state, as.matrix(dt))
+    }
+  )
+)
+
+mlr_pipeops$add("pca_x", PipeOpPCAX)
+```
+
+
+```{r pca_x}
+graph_pcax <- po("pca_x", scale. = TRUE) %>>%
+  po("learner", lrn("classif.rpart"))
+
+graph_pcax$train(task)
+```
+
+```{r pca_x.state}
+graph_pcax$pipeops$pca$.result
+
+graph_pcax$state$pca_x
+
+graph_pcax$state$pca_x$x %>% head()
+```
+
+*Note:* transforming the PC data back to the original data via `ggfortify::unscale` is an unnecessary step that the autoplot function executes. The original data (other than the clusters that we color by) doesn't even get used in the plot. If it's necessary that we include the original data in our plots, we can select the columns as needed. Thus, we don't need to do this in our plot function.
+
+Thus, the entire *unscaling* step can be removed.
+
+```{r geom_scattermore_pca_po}
+#' Plot PCA from a `prcomp` result using geom_scattermore 
+#'
+#' @param model PCA-like instance
+#' @param data Joined to fitting result if provided
+#' @param color Cluster variable in `data` to color by
+#' @param pcs The PCs to plot
+#' @param scale scaling parameter, disabled by 0
+#' @param variance_percentage show the variance explained by the principal component?
+geom_scattermore_pca_po <- function(model, data, color, pcs = 1:2, scale = 1, variance_percentage = TRUE) {
+  # if using data.table data[,cols_clusters, with=F]
+  plot.data <- cbind(data[cols_clusters], model$x)
+  # variance explained
+  ve <- model$sdev^2/sum(model$sdev^2)
+  loadings.column <- "rotation"
+  cols_pcs <- paste0("PC", pcs)
+  # scaled PCA values
+  if (scale != 0) {
+    lam <- model$sdev[pcs]
+    lam <- lam * sqrt(nrow(model$x))
+    lam <- lam^scale
+    plot.data[, cols_pcs] <- t(t(plot.data[, cols_pcs])/lam)
+  }
+  loadings.data <- as.data.frame(model$rotation)
+  labs <- paste0(cols_pcs, " (", round(ve[pcs] * 100, 2), "%)")
+  g <- ggplot(plot.data[c(cols_pcs, color)]) +
+    geom_scattermore(aes(x = PC1, y = PC2, color = get(color)), pointsize = 2) +
+    labs(x = labs[1], y = labs[2], color = color)
+  return(g)
+}
+```
+
+```{r po.geom_scattermore}
+geom_scattermore_pca_po(graph_pcax$state$pca_x, data, color = "Species")
+```
+
+It may be justified to set `scale = 0` by default. There is not much in literature describing why the PCs are each, by default, multiplied by the standard deviation of the PCs times the square root of the number of observations. The `scale` parameter is then multiplied by this scaling. 
+
+```{r po.geom_scattermore.scale.0}
+geom_scattermore_pca_po(graph_pcax$state$pca_x, data, color = "Species", scale = 0)
+```
+
+
+## A T-SNE Example
+
+## A UMAP Example
+
+
