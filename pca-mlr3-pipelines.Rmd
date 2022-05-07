@@ -32,7 +32,7 @@ if (!dir.exists(fig.path)) dir.create(fig.path, recursive = T)
 opts_chunk$set(fig.path = fig.path)
 
 if (!dir.exists(paste0(output, '/assets/'))) dir.create(paste0(output, '/assets/', recursive = T))
-system(sprintf("gcp -u assets/style.css %s/assets/", output))
+system(sprintf("/opt/homebrew/bin/gcp -u assets/style.css %s/assets/", output))
 
 knitr::knit_hooks$set(link = function(before, options) {
   if (before) {
@@ -347,8 +347,8 @@ Thus, the entire *unscaling* step can be removed.
 #' @param scale scaling parameter, disabled by 0
 #' @param variance_percentage show the variance explained by the principal component?
 geom_scattermore_pca_po <- function(model, data, color, pcs = 1:2, scale = 1, variance_percentage = TRUE) {
-  # if using data.table data[,cols_clusters, with=F]
-  plot.data <- cbind(data[cols_clusters], model$x)
+  # if using data.table data[,color, with=F]
+  plot.data <- cbind(data[color], model$x)
   # variance explained
   ve <- model$sdev^2/sum(model$sdev^2)
   loadings.column <- "rotation"
@@ -363,8 +363,8 @@ geom_scattermore_pca_po <- function(model, data, color, pcs = 1:2, scale = 1, va
   loadings.data <- as.data.frame(model$rotation)
   labs <- paste0(cols_pcs, " (", round(ve[pcs] * 100, 2), "%)")
   g <- ggplot(plot.data[c(cols_pcs, color)]) +
-    geom_scattermore(aes(x = PC1, y = PC2, color = get(color)), pointsize = 2) +
-    labs(x = labs[1], y = labs[2], color = color)
+    geom_scattermore(aes(x = PC1, y = PC2, color = .data[[color]]), pointsize = 2) +
+    labs(x = labs[1], y = labs[2])
   return(g)
 }
 ```

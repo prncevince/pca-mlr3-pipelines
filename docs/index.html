@@ -599,7 +599,7 @@ autoplot.prcomp<a href="#_autoplotprcomp_" class="anchor-section" aria-label="An
 ##         xlab = xlab, ylab = ylab, ...)
 ##     return(p)
 ## }
-## &lt;bytecode: 0x13a763f98&gt;
+## &lt;bytecode: 0x12e631150&gt;
 ## &lt;environment: namespace:ggfortify&gt;</code></pre>
 </div>
 <div id="_fortifyprcomp_" class="section level5 hasAnchor">
@@ -628,7 +628,7 @@ ggfortify:::fortify.prcomp</code></pre>
 ##     d &lt;- cbind_wraps(values, d)
 ##     post_fortify(d)
 ## }
-## &lt;bytecode: 0x13a7704d8&gt;
+## &lt;bytecode: 0x12e63b498&gt;
 ## &lt;environment: namespace:ggfortify&gt;</code></pre>
 </div>
 <div id="_unscale_" class="section level5 hasAnchor">
@@ -652,7 +652,7 @@ unscale<a href="#_unscale_" class="anchor-section" aria-label="Anchor link to he
 ##     }
 ##     as.data.frame(data)
 ## }
-## &lt;bytecode: 0x13a775358&gt;
+## &lt;bytecode: 0x12e642510&gt;
 ## &lt;environment: namespace:ggfortify&gt;</code></pre>
 </div>
 <div id="_core-logic_" class="section level5 hasAnchor">
@@ -791,7 +791,7 @@ prcomp.default<a href="#_prcompdefault_" class="anchor-section" aria-label="Anch
 ##     class(r) &lt;- &quot;prcomp&quot;
 ##     r
 ## }
-## &lt;bytecode: 0x11b3b7ee8&gt;
+## &lt;bytecode: 0x12baa9ce8&gt;
 ## &lt;environment: namespace:stats&gt;</code></pre>
 </div>
 <div id="_prcompformula_" class="section level5 hasAnchor">
@@ -825,7 +825,7 @@ prcomp.formula<a href="#_prcompformula_" class="anchor-section" aria-label="Anch
 ##     }
 ##     res
 ## }
-## &lt;bytecode: 0x13c6714b0&gt;
+## &lt;bytecode: 0x13ad5deb8&gt;
 ## &lt;environment: namespace:stats&gt;</code></pre>
 </div>
 </div>
@@ -1017,8 +1017,8 @@ geom_scattermore_pca_po<a href="#_geom_scattermore_pca_po_" class="anchor-sectio
 #&#39; @param scale scaling parameter, disabled by 0
 #&#39; @param variance_percentage show the variance explained by the principal component?
 geom_scattermore_pca_po &lt;- function(model, data, color, pcs = 1:2, scale = 1, variance_percentage = TRUE) {
-  # if using data.table data[,cols_clusters, with=F]
-  plot.data &lt;- cbind(data[cols_clusters], model$x)
+  # if using data.table data[,color, with=F]
+  plot.data &lt;- cbind(data[color], model$x)
   # variance explained
   ve &lt;- model$sdev^2/sum(model$sdev^2)
   loadings.column &lt;- &quot;rotation&quot;
@@ -1033,8 +1033,8 @@ geom_scattermore_pca_po &lt;- function(model, data, color, pcs = 1:2, scale = 1,
   loadings.data &lt;- as.data.frame(model$rotation)
   labs &lt;- paste0(cols_pcs, &quot; (&quot;, round(ve[pcs] * 100, 2), &quot;%)&quot;)
   g &lt;- ggplot(plot.data[c(cols_pcs, color)]) +
-    geom_scattermore(aes(x = PC1, y = PC2, color = get(color)), pointsize = 2) +
-    labs(x = labs[1], y = labs[2], color = color)
+    geom_scattermore(aes(x = PC1, y = PC2, color = .data[[color]]), pointsize = 2) +
+    labs(x = labs[1], y = labs[2])
   return(g)
 }</code></pre>
 </div>
